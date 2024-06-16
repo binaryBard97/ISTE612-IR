@@ -62,6 +62,7 @@ public class InvertedIndex {
 
     public ArrayList<Integer> searchAndMultiple(String[] query) {
         ArrayList<String> sortedQuery = sortQueryByPostingsListSize(query);
+        // System.out.println("sortedQuery" + sortedQuery);
         System.out.println("-------------------------------------------------");
         System.out.println("Task 2.4 Query term processing order:");
         System.out.println();
@@ -82,17 +83,43 @@ public class InvertedIndex {
 
     private ArrayList<String> sortQueryByPostingsListSize(String[] query) {
         ArrayList<String> queryList = new ArrayList<>(Arrays.asList(query));
+
+        // System.out.println("Before sorting by postings list size:");
+        // for (String term : queryList) {
+        // int index = termList.indexOf(term);
+        // if (index == -1) {
+        // // System.out.println("Term: " + term + " (not found in index)");
+        // } else {
+        // ArrayList<Integer> list = docLists.get(index);
+        // // System.out.println("Term: " + term + " (postings list size: " +
+        // list.size() + ")");
+        // }
+        // }
+
         queryList.sort((term1, term2) -> {
             int index1 = termList.indexOf(term1);
             int index2 = termList.indexOf(term2);
             if (index1 == -1)
-                return 1;
+                return 1; // If term1 is not in the index, place it later
             if (index2 == -1)
-                return -1;
+                return -1; // If term2 is not in the index, place it later
             ArrayList<Integer> list1 = docLists.get(index1);
             ArrayList<Integer> list2 = docLists.get(index2);
             return Integer.compare(list1.size(), list2.size());
         });
+
+        // System.out.println("After sorting by postings list size:");
+        // for (String term : queryList) {
+        // int index = termList.indexOf(term);
+        // if (index == -1) {
+        // System.out.println("Term: " + term + " (not found in index)");
+        // } else {
+        // ArrayList<Integer> list = docLists.get(index);
+        // System.out.println("Term: " + term + " (postings list size: " + list.size() +
+        // ")");
+        // }
+        // }
+
         return queryList;
     }
 

@@ -13,7 +13,6 @@ public class Parser {
 
         File folder = new File(folderName);
         File[] listOfFiles = folder.listFiles();
-
         myDocs = new String[listOfFiles.length]; // store file names
 
         System.out.println("Unsorted document list");
@@ -22,8 +21,9 @@ public class Parser {
             myDocs[i] = listOfFiles[i].getName();
         }
 
-        System.out.println("Sorted document list");
         Arrays.sort(myDocs);
+
+        System.out.println("Sorted document list");
         for (int i = 0; i < myDocs.length; i++) {
             System.out.println(myDocs[i]);
             String[] tokens = parse(folderName + "/" + myDocs[i]);
@@ -41,6 +41,7 @@ public class Parser {
               // System.out.println("Stopword was and perhaps removed: " + token);
               // }
         }
+        // System.out.println("Added new term to index: " + processedTokens);
         invertedIndex.addDocument(processedTokens.toArray(new String[0]), docId);
     }
 
@@ -81,6 +82,7 @@ public class Parser {
         stemmer.add(token.toCharArray(), token.length());
         stemmer.stem();
         // System.out.println("from Parser >> stemmed: " + stemmer.toString());
+
         return stemmer.toString();
     }
 

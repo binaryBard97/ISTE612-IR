@@ -24,6 +24,8 @@ public class Main {
         // Task 2.4
         multipleKeywordSearch(parser, invertedIndex, new String[] { "steal", "clout",
                 "attempt" });
+        multipleKeywordSearch(parser, invertedIndex, new String[] { "stalker", "brooke",
+                "psycho" });
         multipleKeywordSearch(parser, invertedIndex, new String[] { "proliferation", "ditzy",
                 "house" });
     }
