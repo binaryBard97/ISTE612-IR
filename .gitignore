@@ -1,0 +1,10 @@
+# Ignore class files
+*.class
+
+# Ignore log files
+*.log
+
+# Ignore MacOS system files
+.DS_Store
+
+
