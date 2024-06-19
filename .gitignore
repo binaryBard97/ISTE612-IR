@@ -10,3 +10,5 @@
 # misc
 *.pdf
 
+# data files
+#.txt
