@@ -63,8 +63,8 @@ public class InvertedIndex {
     public ArrayList<Integer> searchAndMultiple(String[] query) {
         ArrayList<String> sortedQuery = sortQueryByPostingsListSize(query);
         // System.out.println("sortedQuery" + sortedQuery);
-        System.out.println("-------------------------------------------------");
-        System.out.println("Task 2.4 Query term processing order:");
+        // System.out.println("-------------------------------------------------");
+        System.out.println("Query term processing order:");
         System.out.println();
         for (int i = 0; i < sortedQuery.size(); i++) {
             System.out.println((i + 1) + ". " + sortedQuery.get(i));
