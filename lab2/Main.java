@@ -1,5 +1,3 @@
-import java.util.ArrayList;
-
 public class Main {
     public static void main(String[] args) {
         String path = "my_Lab1_Data";
@@ -7,12 +5,15 @@ public class Main {
 
         System.out.println(pi);
 
-        ArrayList<Integer> result = pi.intersect("plot", "two");
+        // testPhraseQuery(pi, "the quick brown");
+        testPhraseQuery(pi, "new home sales");
+        // testPhraseQuery(pi, "quick brown fox jumps");
+        // testPhraseQuery(pi, "over the lazy brown dog");
+    }
 
-        if (result.size() != 0) {
-            for (Integer i : result)
-                System.out.println("Document " + i + ": " + pi.myDocs[i]);
-        } else
-            System.out.println("No adjacency found!");
+    public static void testPhraseQuery(PositionalIndex pi, String phrase) {
+        System.out.println("Phrase Query: \"" + phrase + "\"");
+        String result = pi.phraseQuery(phrase);
+        System.out.println(result);
     }
 }
