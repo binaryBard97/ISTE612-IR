@@ -34,46 +34,34 @@ public class PositionalIndex {
 
             for (int j = 0; j < tokens.length; j++) { // looking through tokens - where are we in doc?
                token = tokens[j];
-               // System.out.println(token);
-               // System.out.println("TermList after tokenization");
-               // System.out.println("termList: " + termList);
 
                if (!termList.contains(token)) { // is this term in the dictionary? NEW term
-                  // System.out.println("If this term is not in the dict i.e NEW term");
+
                   termList.add(token);
-                  // System.out.println("Then added to termList" + termList);
+
                   docList = new ArrayList<DocId>();
-                  // System.out.println(
-                  // "The Doc ID i.e i that we are looking at >> " + i + " the index of the term
-                  // in that doc ID >> "
-                  // + j);
+
                   DocId doid = new DocId(i, j); // document ID and position passed in
                   docList.add(doid); // add to postings for this term
-                  // System.out.println("doid: " + doid);
-                  // System.out.println("docList: " + docList);
+
                   docLists.add(docList); // add row to postings list
-                  // System.out.println("docLists: " + docLists);
+
                } else { // term is in dictionary, need to make updates
-                  // System.out.println("If the term is already in the termList");
+
                   int index = termList.indexOf(token);
-                  // System.out.println("then it is at index: " + index);
+
                   docList = docLists.get(index);
-                  // System.out.println("so it is at index/ the name of that docList : " +
-                  // docList);
+
                   int k = 0; // which doc we are referring to
                   boolean match = false; // did we already see this document?
-                  // search the postings for a document id
-                  // if match, insert a new position for this document
+
                   for (DocId doid : docList) {
-                     // System.out.println("doid is " + doid);
-                     // System.out.println("i is >>>>> " + i);
-                     // System.out.println("j is >>>>> " + j);
-                     // System.out.println("k is >>>>> " + k);
+
                      if (doid.docId == i) { // we've seen term in this document before
-                        // System.out.println("BEFORE docList " + docList);
+
                         doid.insertPosition(j); // add a position to the position list
                         docList.set(k, doid); // update position list
-                        // System.out.println("updated docList " + docList);
+
                         match = true;
                         break;
                      }
@@ -161,41 +149,46 @@ public class PositionalIndex {
 
    // Implement a phraseQuery method that takes in a phrase query wit multiple
    // terms and return a list of DocId objects
-   public String phraseQuery(String phrase) {
+   public ArrayList<DocId> phraseQuery(String phrase) {
+      // split phrase into terms
       String[] terms = phrase.split(" ");
       if (terms.length == 0)
-         return "";
+         return new ArrayList<>();
 
+      // intialize the documents containing the first term ; documents containing
+      // "new"
       ArrayList<DocId> result = docLists.get(termList.indexOf(terms[0]));
 
+      // iterate through all query terms
       for (int i = 1; i < terms.length; i++) {
+         // intersect adjacent terms
          ArrayList<Integer> intersectResult = intersect(terms[i - 1], terms[i]);
+         // check each document from the current result list to see if it appears in the
+         // intersect result
          ArrayList<DocId> newResult = new ArrayList<>();
-
          for (DocId docId : result) {
             if (intersectResult.contains(docId.docId)) {
                newResult.add(docId);
             }
          }
-
          result = newResult;
       }
 
-      // Build the output string
-      StringBuilder output = new StringBuilder();
-
-      for (String term : terms) {
-         if (termList.contains(term)) {
-            int index = termList.indexOf(term);
-            output.append(String.format("%-15s", term));
-            for (DocId docId : docLists.get(index)) {
-               output.append(docId).append("\t");
+      ArrayList<DocId> finalResults = new ArrayList<>();
+      for (int i = 0; i < terms.length; i++) {
+         for (DocId docId : result) {
+            if (termList.contains(terms[i])) {
+               int index = termList.indexOf(terms[i]);
+               for (DocId termDocId : docLists.get(index)) {
+                  if (termDocId.docId == docId.docId) {
+                     finalResults.add(termDocId);
+                  }
+               }
             }
-            output.append("\n");
          }
       }
 
-      return output.toString();
+      return finalResults;
    }
 
 }
