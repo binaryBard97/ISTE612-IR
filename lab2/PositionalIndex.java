@@ -147,9 +147,9 @@ public class PositionalIndex {
       return allLines.toString().split("[ .,?!:;$%&+*/]+");
    }
 
-   // Implement a phraseQuery method that takes in a phrase query wit multiple
-   // terms and return a list of DocId objects
-   public ArrayList<DocId> phraseQuery(String phrase) {
+   // Implement a phraseQuery method that takes in a phrase query with multiple
+   // terms and returns a list of ResultEntry objects
+   public ArrayList<ResultEntry> phraseQuery(String phrase) {
       // split phrase into terms
       String[] terms = phrase.split(" ");
       if (terms.length == 0)
@@ -174,23 +174,31 @@ public class PositionalIndex {
          result = newResult;
       }
 
-      ArrayList<DocId> finalResults = new ArrayList<>();
-      for (int i = 0; i < terms.length; i++) {
-         for (DocId docId : result) {
-            if (termList.contains(terms[i])) {
-               int index = termList.indexOf(terms[i]);
+      ArrayList<ResultEntry> finalResults = new ArrayList<>();
+      for (String term : terms) {
+         if (termList.contains(term)) {
+            int index = termList.indexOf(term);
+            for (DocId docId : result) {
                for (DocId termDocId : docLists.get(index)) {
                   if (termDocId.docId == docId.docId) {
-                     finalResults.add(termDocId);
+                     finalResults.add(new ResultEntry(term, termDocId));
                   }
                }
             }
          }
       }
 
+      Collections.sort(finalResults, new Comparator<ResultEntry>() {
+         public int compare(ResultEntry r1, ResultEntry r2) {
+            if (r1.docId.docId == r2.docId.docId) {
+               return Integer.compare(r1.docId.positionList.get(0), r2.docId.positionList.get(0));
+            }
+            return Integer.compare(r1.docId.docId, r2.docId.docId);
+         }
+      });
+
       return finalResults;
    }
-
 }
 
 class DocId {
@@ -217,5 +225,19 @@ class DocId {
       // remove extraneous final comma
       docIdString = docIdString.substring(0, docIdString.length() - 1) + ">";
       return docIdString;
+   }
+}
+
+class ResultEntry {
+   String term;
+   DocId docId;
+
+   public ResultEntry(String term, DocId docId) {
+      this.term = term;
+      this.docId = docId;
+   }
+
+   public String toString() {
+      return term + " - " + docId;
    }
 }

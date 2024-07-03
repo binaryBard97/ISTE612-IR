@@ -6,7 +6,7 @@ public class Main {
         PositionalIndex pi = new PositionalIndex(path);
 
         // System.out.println(pi);
-
+        // testPhraseQuery(pi, "new home sales");
         testPhraseQuery(pi, "cute outfits");
         testPhraseQuery(pi, "dragon's comedy shtick");
         testPhraseQuery(pi, "for most of its");
@@ -16,9 +16,9 @@ public class Main {
     public static void testPhraseQuery(PositionalIndex pi, String phrase) {
         System.out.println();
         System.out.println("Phrase Query: \"" + phrase + "\"");
-        ArrayList<DocId> result = pi.phraseQuery(phrase);
-        for (DocId docId : result) {
-            System.out.println(docId);
+        ArrayList<ResultEntry> result = pi.phraseQuery(phrase);
+        for (ResultEntry entry : result) {
+            System.out.println(entry);
         }
     }
 }
