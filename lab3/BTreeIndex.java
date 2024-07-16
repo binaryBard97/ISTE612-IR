@@ -4,34 +4,32 @@ import java.util.*;
 public class BTreeIndex {
     Node root;
 
-    // Node class as defined previously
     public static class Node {
         String term;
-        List<Integer> docIDs;
+        List<String> docNames;
         Node left, right;
 
-        public Node(String term, int docID) {
+        public Node(String term, String docName) {
             this.term = term;
-            this.docIDs = new ArrayList<>();
-            this.docIDs.add(docID);
+            this.docNames = new ArrayList<>();
+            this.docNames.add(docName);
             this.left = null;
             this.right = null;
         }
     }
 
-    // Constructor to build the binary tree index
     public BTreeIndex(String folderPath) throws IOException {
         File folder = new File(folderPath);
-        File[] files = folder.listFiles();
+        File[] files = folder.listFiles((dir, name) -> name.endsWith(".txt"));
 
         if (files != null) {
-            for (int i = 0; i < files.length; i++) {
-                BufferedReader reader = new BufferedReader(new FileReader(files[i]));
+            for (File file : files) {
+                BufferedReader reader = new BufferedReader(new FileReader(file));
                 String line;
                 while ((line = reader.readLine()) != null) {
                     String[] terms = line.split("\\s+");
                     for (String term : terms) {
-                        add(root, new Node(term, i));
+                        root = add(root, new Node(term.toLowerCase(), file.getName()));
                     }
                 }
                 reader.close();
@@ -39,26 +37,20 @@ public class BTreeIndex {
         }
     }
 
-    public void add(Node node, Node iNode) {
-        if (root == null) {
-            root = iNode;
+    public Node add(Node node, Node iNode) {
+        if (node == null) {
+            return iNode;
+        }
+        if (node.term.compareTo(iNode.term) > 0) {
+            node.left = add(node.left, iNode);
+        } else if (node.term.compareTo(iNode.term) < 0) {
+            node.right = add(node.right, iNode);
         } else {
-            if (node.term.compareTo(iNode.term) > 0) {
-                if (node.left == null) {
-                    node.left = iNode;
-                } else {
-                    add(node.left, iNode);
-                }
-            } else if (node.term.compareTo(iNode.term) < 0) {
-                if (node.right == null) {
-                    node.right = iNode;
-                } else {
-                    add(node.right, iNode);
-                }
-            } else {
-                node.docIDs.add(iNode.docIDs.get(0));
+            if (!node.docNames.contains(iNode.docNames.get(0))) {
+                node.docNames.add(iNode.docNames.get(0));
             }
         }
+        return node;
     }
 
     public Node search(Node n, String key) {
@@ -72,41 +64,61 @@ public class BTreeIndex {
         }
     }
 
-    public List<Integer> conjunctiveSearch(String[] terms) {
-        List<Integer> results = new ArrayList<>();
+    public List<String> conjunctiveSearch(String[] terms) {
+        List<String> results = new ArrayList<>();
         if (terms.length == 0)
             return results;
 
-        Node first = search(root, terms[0]);
+        Node first = search(root, terms[0].toLowerCase());
         if (first == null)
             return results;
 
-        results.addAll(first.docIDs);
+        results.addAll(first.docNames);
         for (int i = 1; i < terms.length; i++) {
-            Node termNode = search(root, terms[i]);
+            Node termNode = search(root, terms[i].toLowerCase());
             if (termNode == null)
                 return new ArrayList<>();
-            results.retainAll(termNode.docIDs);
+            results.retainAll(termNode.docNames);
         }
         return results;
     }
 
-    public void visualizeTree(Node node, int level, Map<Integer, List<String>> levelMap) {
-        if (node == null)
-            return;
-        levelMap.putIfAbsent(level, new ArrayList<>());
-        levelMap.get(level).add(node.term);
-        visualizeTree(node.left, level + 1, levelMap);
-        visualizeTree(node.right, level + 1, levelMap);
-    }
-
     public void visualizeTree() {
-        Map<Integer, List<String>> levelMap = new HashMap<>();
-        visualizeTree(root, 0, levelMap);
+        if (root == null)
+            return;
+
+        Map<Integer, List<Node>> levelMap = new HashMap<>();
+        Queue<Node> queue = new LinkedList<>();
+        Queue<Integer> levels = new LinkedList<>();
+
+        queue.add(root);
+        levels.add(0);
+
+        while (!queue.isEmpty()) {
+            Node currentNode = queue.poll();
+            int level = levels.poll();
+
+            levelMap.putIfAbsent(level, new ArrayList<>());
+            levelMap.get(level).add(currentNode);
+
+            if (currentNode.left != null) {
+                queue.add(currentNode.left);
+                levels.add(level + 1);
+            }
+            if (currentNode.right != null) {
+                queue.add(currentNode.right);
+                levels.add(level + 1);
+            }
+        }
+
         try {
             PrintWriter writer = new PrintWriter("tree.txt", "UTF-8");
-            for (Map.Entry<Integer, List<String>> entry : levelMap.entrySet()) {
-                writer.println("Level " + entry.getKey() + ": " + String.join(", ", entry.getValue()));
+            for (int i = 0; i <= 3; i++) {
+                if (levelMap.containsKey(i)) {
+                    writer.println("Level " + i + ": " + formatLevel(levelMap.get(i)));
+                } else {
+                    writer.println("Level " + i + ": ");
+                }
             }
             writer.close();
         } catch (Exception e) {
@@ -114,39 +126,48 @@ public class BTreeIndex {
         }
     }
 
+    private String formatLevel(List<Node> nodes) {
+        StringBuilder sb = new StringBuilder();
+        for (Node node : nodes) {
+            sb.append(node.term).append(" (").append(String.join(", ", node.docNames)).append(") ");
+            if (node.left != null) {
+                sb.append("[L: ").append(node.left.term).append("] ");
+            }
+            if (node.right != null) {
+                sb.append("[R: ").append(node.right.term).append("] ");
+            }
+            sb.append("| ");
+        }
+        return sb.toString();
+    }
+
     public static void main(String[] args) {
         try {
-            // Change the path to the folder containing your documents
-            String folderPath = "my_Lab1_Data";
+            String folderPath = "Lab1_data";
             BTreeIndex bTreeIndex = new BTreeIndex(folderPath);
 
             // Single term queries
             System.out.println("Single Term Queries:");
-            System.out.println("sales: " + bTreeIndex.search(bTreeIndex.root,
-                    "sales").docIDs);
-            System.out.println("july: " + bTreeIndex.search(bTreeIndex.root,
-                    "july").docIDs);
-            // System.out.println("plot: " + bTreeIndex.search(bTreeIndex.root,
-            // "plot").docIDs);
-            // System.out.println("watch: " + bTreeIndex.search(bTreeIndex.root,
-            // "watch").docIDs);
+            Node plotNode = bTreeIndex.search(bTreeIndex.root, "plot");
+            System.out.println("plot: " + (plotNode != null ? plotNode.docNames : "Not Found"));
+            Node watchNode = bTreeIndex.search(bTreeIndex.root, "watch");
+            System.out.println("watch: " + (watchNode != null ? watchNode.docNames : "Not Found"));
 
-            // Conjunctive queries
+            // two term queries
             System.out.println("Conjunctive Queries:");
             System.out
-                    .println("new AND rise: " + bTreeIndex.conjunctiveSearch(new String[] {
-                            "new", "rise" }));
-            System.out.println("increase AND sales AND july: "
-                    + bTreeIndex.conjunctiveSearch(new String[] { "increase", "sales", "july"
-                    }));
-            // System.out
-            // .println("warner AND animated: "
-            // + bTreeIndex.conjunctiveSearch(new String[] { "warner", "animated" }));
-            // System.out.println("steal AND clout AND attempt: "
-            // + bTreeIndex.conjunctiveSearch(new String[] { "steal", "clout", "attempt"
-            // }));
+                    .println("kick AND ship: "
+                            + bTreeIndex.conjunctiveSearch(new String[] { "kick", "ship" }));
+            System.out
+                    .println("pretty AND decent: "
+                            + bTreeIndex.conjunctiveSearch(new String[] { "pretty", "decent" }));
 
-            // Visualize tree
+            // three term queries
+            System.out.println("robots AND empty AND pink: "
+                    + bTreeIndex.conjunctiveSearch(new String[] { "robots", "empty", "pink" }));
+            System.out.println("steal AND clout AND attempt: "
+                    + bTreeIndex.conjunctiveSearch(new String[] { "steal", "clout", "attempt" }));
+
             bTreeIndex.visualizeTree();
         } catch (IOException e) {
             e.printStackTrace();

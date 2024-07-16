@@ -9,6 +9,7 @@
 
 # misc
 *.pdf
+*.zip
 
 # data files
 *.txt
