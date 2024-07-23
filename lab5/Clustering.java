@@ -17,6 +17,7 @@ public class Clustering {
 	 */
 	public Clustering(int numC) {
 		// TO BE COMPLETED
+		// alpha_1 = initial weight given to each cluster.
 	}
 
 	/**
@@ -63,6 +64,7 @@ public class Clustering {
 		 * 5 6 7 8 9
 		 */
 	}
+
 }
 
 /**
@@ -71,4 +73,16 @@ public class Clustering {
  */
 class Doc {
 	// TO BE COMPLETED
+	int docId;
+	double tw; // term's weight in this document
+
+	public Doc(int did, double weight) {
+		docId = did;
+		tw = weight;
+	}
+
+	public String toString() {
+		String docIdString = docId + ": " + tw;
+		return docIdString;
+	}
 }

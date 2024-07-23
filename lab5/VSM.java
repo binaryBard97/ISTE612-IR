@@ -63,6 +63,7 @@ public class VSM {
          for (int j = 0; j < docList.size(); j++) {
             doc = docList.get(j);
             double tfidf = (1 + Math.log(doc.tw)) * Math.log(N / (df * 1.0));
+            tfidf = Math.round(tfidf * 100.0) / 100.0;
             docLengthVec[doc.docId] += Math.pow(tfidf, 2);
             doc.tw = tfidf;
             docList.set(j, doc);
@@ -149,19 +150,19 @@ public class VSM {
       vsm.rankSearch(query3);
       vsm.rankSearch(query4);
    }
-}
 
-class Doc {
-   int docId;
-   double tw; // term's weight in this document
+   static class Doc {
+      int docId;
+      double tw; // term's weight in this document
 
-   public Doc(int did, double weight) {
-      docId = did;
-      tw = weight;
-   }
+      public Doc(int did, double weight) {
+         docId = did;
+         tw = weight;
+      }
 
-   public String toString() {
-      String docIdString = docId + ": " + tw;
-      return docIdString;
+      public String toString() {
+         String docIdString = docId + ": " + tw;
+         return docIdString;
+      }
    }
 }
