@@ -9,6 +9,10 @@ public class Clustering {
 	private Map<String, Integer> termIndex;
 	private double[][] tfMatrix;
 	private List<List<Integer>> clusters;
+	private double epsilon = 0.0001; // Smoothing factor for EM - textbook page
+	private double[][] centroids;
+	private double[] clusterPriors;
+	private double[][] termProbabilities;
 
 	// Constructor for attribute initialization
 	public Clustering(int numC) {
@@ -16,6 +20,9 @@ public class Clustering {
 		this.documents = new ArrayList<>();
 		this.termIndex = new HashMap<>();
 		this.clusters = new ArrayList<>();
+		this.centroids = new double[numC][];
+		this.clusterPriors = new double[numC];
+		this.termProbabilities = new double[numC][];
 		for (int i = 0; i < numC; i++) {
 			this.clusters.add(new ArrayList<>());
 		}
@@ -45,54 +52,95 @@ public class Clustering {
 		}
 	}
 
-	// Cluster the documents using K-means
+	// Cluster the documents using K-means and initialize EM
 	public void cluster() {
-		int[] initialCentroids = { 0, 9 }; // first and ninth documents as initial centroids
-		double[][] centroids = new double[numClusters][termIndex.size()];
-
+		int[] initialCentroids = { 0, 9 }; // First and ninth documents as initial centroids
 		for (int i = 0; i < numClusters; i++) {
 			centroids[i] = Arrays.copyOf(tfMatrix[initialCentroids[i]], termIndex.size());
+			termProbabilities[i] = new double[termIndex.size()];
 		}
 
 		boolean changed;
+		int iteration = 0;
+		double prevLogLikelihood = Double.NEGATIVE_INFINITY;
+		double logLikelihood;
+
 		do {
 			changed = false;
 			for (List<Integer> cluster : clusters) {
 				cluster.clear();
 			}
 
-			// Assign documents to the nearest centroid
+			// Expectation Step: Compute soft assignments
+			double[][] responsibilities = new double[tfMatrix.length][numClusters];
 			for (int i = 0; i < tfMatrix.length; i++) {
-				double minDistance = Double.MAX_VALUE;
-				int closestCluster = -1;
+				double totalProbability = 0;
 				for (int j = 0; j < numClusters; j++) {
-					double distance = euclideanDistance(tfMatrix[i], centroids[j]);
-					if (distance < minDistance) {
-						minDistance = distance;
-						closestCluster = j;
-					}
+					responsibilities[i][j] = computeProbability(tfMatrix[i], centroids[j]);
+					totalProbability += responsibilities[i][j];
 				}
-				clusters.get(closestCluster).add(i);
-			}
-
-			// Recompute the centroids
-			for (int i = 0; i < numClusters; i++) {
-				double[] newCentroid = new double[termIndex.size()];
-				for (int docId : clusters.get(i)) {
-					for (int j = 0; j < termIndex.size(); j++) {
-						newCentroid[j] += tfMatrix[docId][j];
-					}
-				}
-				for (int j = 0; j < termIndex.size(); j++) {
-					newCentroid[j] /= clusters.get(i).size();
-				}
-
-				if (!Arrays.equals(newCentroid, centroids[i])) {
-					changed = true;
-					centroids[i] = newCentroid;
+				for (int j = 0; j < numClusters; j++) {
+					responsibilities[i][j] /= totalProbability;
 				}
 			}
-		} while (changed);
+
+			// Maximization Step: Update centroids and cluster priors
+			double[] clusterCounts = new double[numClusters];
+			for (int j = 0; j < numClusters; j++) {
+				Arrays.fill(termProbabilities[j], 0);
+			}
+
+			for (int i = 0; i < tfMatrix.length; i++) {
+				for (int j = 0; j < numClusters; j++) {
+					clusterCounts[j] += responsibilities[i][j];
+					for (int k = 0; k < termIndex.size(); k++) {
+						termProbabilities[j][k] += responsibilities[i][j] * tfMatrix[i][k];
+					}
+				}
+			}
+
+			for (int j = 0; j < numClusters; j++) {
+				if (clusterCounts[j] > 0) {
+					for (int k = 0; k < termIndex.size(); k++) {
+						centroids[j][k] = (termProbabilities[j][k] + epsilon) / (clusterCounts[j] + epsilon);
+					}
+					clusterPriors[j] = clusterCounts[j] / tfMatrix.length;
+				}
+			}
+
+			// Assign documents to clusters based on responsibilities
+			for (int i = 0; i < tfMatrix.length; i++) {
+				int bestCluster = 0;
+				double maxResponsibility = 0;
+				for (int j = 0; j < numClusters; j++) {
+					if (responsibilities[i][j] > maxResponsibility) {
+						maxResponsibility = responsibilities[i][j];
+						bestCluster = j;
+					}
+				}
+				clusters.get(bestCluster).add(i);
+			}
+
+			// Compute log-likelihood
+			logLikelihood = 0;
+			for (int i = 0; i < tfMatrix.length; i++) {
+				double docLikelihood = 0;
+				for (int j = 0; j < numClusters; j++) {
+					docLikelihood += clusterPriors[j] * computeProbability(tfMatrix[i], centroids[j]);
+				}
+				logLikelihood += Math.log(docLikelihood + epsilon); // epsilon for numerical stability
+			}
+
+			// System.out.println("Iteration " + iteration + ": Log-Likelihood = " +
+			// logLikelihood);
+			// for (int i = 0; i < numClusters; i++) {
+			// System.out.println("Cluster " + i + ": " + clusters.get(i));
+			// }
+
+			changed = (Math.abs(logLikelihood - prevLogLikelihood) > epsilon);
+			prevLogLikelihood = logLikelihood;
+			iteration++;
+		} while (changed && iteration < 25); // Limit iterations to prevent infinite loop
 
 		// Output cluster assignments
 		for (int i = 0; i < numClusters; i++) {
@@ -102,6 +150,19 @@ public class Clustering {
 			}
 			System.out.println();
 		}
+	}
+
+	// Compute the probability of a document given a centroid
+	private double computeProbability(double[] docVector, double[] centroidVector) {
+		double dotProduct = 0;
+		double normDoc = 0;
+		double normCentroid = 0;
+		for (int i = 0; i < docVector.length; i++) {
+			dotProduct += docVector[i] * centroidVector[i];
+			normDoc += docVector[i] * docVector[i];
+			normCentroid += centroidVector[i] * centroidVector[i];
+		}
+		return Math.exp(dotProduct / (Math.sqrt(normDoc) * Math.sqrt(normCentroid)));
 	}
 
 	// Compute the Euclidean distance between two vectors
@@ -114,7 +175,8 @@ public class Clustering {
 	}
 
 	public static void main(String[] args) {
-		String[] docs = { "hot chocolate cocoa beans", // doc 0
+		String[] docs = {
+				"hot chocolate cocoa beans", // doc 0
 				"cocoa ghana africa", // doc 1
 				"beans harvest ghana", // doc 2
 				"cocoa butter", // doc 3
